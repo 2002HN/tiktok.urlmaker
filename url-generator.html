@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Tiktok-AFS URL 生成器</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-top: 12px;
+      font-weight: 500;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 14px;
+      box-sizing: border-box;
+      transition: border 0.3s;
+    }
+    input:focus, textarea:focus {
+      border-color: #007aff;
+      outline: none;
+    }
+    textarea {
+      height: 120px;
+      resize: vertical;
+    }
+    .btn-group {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      flex: 1;
+      background: #d8d8d8;
+      color: #333;
+      border: none;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #a4a4a4;
+    }
+    .history {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f2f2f7;
+      border-radius: 12px;
+    }
+    .history h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-list {
+      margin-top: 10px;
+      display: none;
+    }
+    .history-item {
+      padding: 6px 8px;
+      margin: 4px 0;
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .history-item:hover {
+      background: #e6f0ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Tiktok-AFS URL 生成器</h2>
+
+    <label>域名与路径:</label>
+    <input type="text" id="domain" placeholder="例: https://www.example.com/page/">
+
+    <label>ttPixelId:</label>
+    <input type="text" id="pixel" placeholder="例: D3D6A43C77UCFFQTBTOG">
+
+    <label>gasa_rac (广告描述):</label>
+    <input type="text" id="rac" placeholder="例: ECサイト運営+28万円~40万円、通勤費、社保完備">
+
+    <label>gasa_terms (逗号或换行分隔):</label>
+    <textarea id="terms" placeholder="例: ec運用, ecサイト運用, ec運営"></textarea>
+
+    <label>channel:</label>
+    <input type="text" id="channel" placeholder="例: 54921">
+
+    <div class="btn-group">
+      <button type="button" onclick="generateURL()">生成 URL</button>
+      <button type="button" onclick="copyURL()">复制 URL</button>
+      <button type="button" onclick="previewURL()">预览 URL</button>
+    </div>
+
+    <h3>结果:</h3>
+    <textarea id="result" readonly placeholder="生成的链接会显示在这里"></textarea>
+
+    <div class="history">
+      <h3 onclick="toggleHistory()">历史记录 <span id="toggleIcon">▶</span></h3>
+      <div id="historyList" class="history-list"></div>
+    </div>
+  </div>
+
+  <script>
+    let firstCopy = true; // ✅ 复制提示只提醒一次
+
+    function generateURL() {
+      let domain = document.getElementById("domain").value.trim();
+      let pixel = document.getElementById("pixel").value.trim();
+      let rac = document.getElementById("rac").value.trim();
+      let termsInput = document.getElementById("terms").value;
+      let terms = termsInput.split(/,|\n/).map(t => t.trim()).filter(t => t);
+      let channel = document.getElementById("channel").value.trim();
+
+      let url = `${domain}?ttPixelId=${pixel}&gasa_rac=${rac}`;
+      terms.forEach((t, i) => {
+        url += `&gasa_term${i+1}=${t}`;
+      });
+      url += `&channel=${channel}`;
+      url += "&utm_source=tiktok&utm_medium=tt&utm_campaign=__CAMPAIGN_NAME__&utm_content=__CID__&utm_term=__CAMPAIGN_ID__";
+
+      document.getElementById("result").value = url;
+
+      saveHistory(url);
+      renderHistory();
+    }
+
+    function copyURL() {
+      let result = document.getElementById("result");
+      result.select();
+      document.execCommand("copy");
+
+      if (firstCopy) {
+        alert("已复制到剪贴板 ✅");
+        firstCopy = false;
+      }
+    }
+
+    function previewURL() {
+      let url = document.getElementById("result").value;
+      if (url) window.open(url, "_blank");
+      else alert("请先生成 URL");
+    }
+
+    function saveHistory(url) {
+      let history = JSON.parse(localStorage.getItem("urlHistory")) || [];
+      history.unshift(url);
+      history = history.slice(0, 10);
+      localStorage.setItem("urlHistory", JSON.stringify(history));
+    }
+
+    function renderHistory() {
+      let history = JSON.parse(localStorage.getItem("urlHistory")) || [];
+      let container = document.getElementById("historyList");
+      container.innerHTML = "";
+      history.forEach(url => {
+        let div = document.createElement("div");
+        div.className = "history-item";
+        div.innerText = url.substring(0, 80) + (url.length > 80 ? "..." : "");
+        div.title = url;
+        div.onclick = () => {
+          document.getElementById("result").value = url;
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function toggleHistory() {
+      let list = document.getElementById("historyList");
+      let icon = document.getElementById("toggleIcon");
+      if (list.style.display === "none" || list.style.display === "") {
+        list.style.display = "block";
+        icon.textContent = "▼";
+      } else {
+        list.style.display = "none";
+        icon.textContent = "▶";
+      }
+    }
+
+    window.onload = renderHistory;
+  </script>
+</body>
+</html>
